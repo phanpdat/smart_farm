@@ -7,6 +7,7 @@ import '../theme/app_colors.dart';
 import '../widgets/sensor_card.dart';
 import '../widgets/action_toggle.dart';
 import '../providers/farm_provider.dart';
+import 'package:flutter_mjpeg/flutter_mjpeg.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -25,7 +26,7 @@ class DashboardScreen extends StatelessWidget {
           const SizedBox(height: 50),
           _buildHeader(),
           const SizedBox(height: 24),
-          _buildHeroCard(),
+          _buildHeroCard(context, farmProvider),
           const SizedBox(height: 20),
           _buildGrowthVelocityChart(),
           const SizedBox(height: 20),
@@ -101,21 +102,16 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeroCard() {
+  Widget _buildHeroCard(BuildContext context, FarmProvider provider) {
     return Container(
       width: double.infinity,
       height: 220,
       decoration: BoxDecoration(
+        color: Colors.black,
         borderRadius: BorderRadius.circular(24),
-        image: const DecorationImage(
-          image: NetworkImage(
-            'https://images.unsplash.com/photo-1592419044706-39796d40f98c?q=80&w=1000&auto=format&fit=crop',
-          ),
-          fit: BoxFit.cover,
-        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(10),
+            color: Colors.black.withAlpha(50),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -123,6 +119,46 @@ class DashboardScreen extends StatelessWidget {
       ),
       child: Stack(
         children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Mjpeg(
+              isLive: true,
+              error: (context, error, stack) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        LucideIcons.wifiOff,
+                        color: Colors.white24,
+                        size: 40,
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'CAMERA OFFLINE',
+                        style: TextStyle(
+                          color: Colors.white24,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        provider.cameraUrl,
+                        style: const TextStyle(
+                          color: Colors.white10,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              stream: provider.cameraUrl,
+              width: double.infinity,
+              height: 220,
+              fit: BoxFit.cover,
+            ),
+          ),
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
@@ -136,25 +172,31 @@ class DashboardScreen extends StatelessWidget {
           Positioned(
             top: 16,
             right: 16,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.black.withAlpha(50),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: const [
-                  Icon(LucideIcons.video, size: 16, color: Colors.white),
-                  SizedBox(width: 6),
-                  const Text(
-                    'REC',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+            child: GestureDetector(
+              onTap: () => _showCameraUrlDialog(context, provider),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withAlpha(50),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: const [
+                    Icon(LucideIcons.video, size: 16, color: Colors.white),
+                    SizedBox(width: 6),
+                    Text(
+                      'REC',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -395,6 +437,21 @@ class DashboardScreen extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: ActionToggle(
+                icon: LucideIcons.lightbulb,
+                label: 'LED',
+                status: status.led ? 'ON' : 'OFF',
+                isActive: status.led,
+                onTap: () => provider.toggleDevice('led', status.led),
+              ),
+            ),
+            const Spacer(), // Placeholder to keep grid aligned if odd number
+          ],
+        ),
       ],
     );
   }
@@ -449,7 +506,88 @@ class DashboardScreen extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: SensorCard(
+                icon: LucideIcons.flame,
+                label: 'Gas Level',
+                value: '${sensorData.gas} ppm',
+                status: sensorData.gas < 1000 ? 'Safe' : 'Warning',
+                statusColor: sensorData.gas < 1000 ? AppColors.accent : Colors.red,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: SensorCard(
+                icon: LucideIcons.cloudRain,
+                label: 'Rainfall',
+                value: sensorData.rain < 2000 ? 'Raining' : 'Dry',
+                status: 'Analog: ${sensorData.rain}',
+                statusColor: sensorData.rain < 2000 ? Colors.blue : Colors.orange,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: SensorCard(
+                icon: LucideIcons.mountain,
+                label: 'Soil Sensor',
+                value: sensorData.soil < 2000 ? 'Wet' : 'Dry',
+                status: 'Value: ${sensorData.soil}',
+                statusColor: sensorData.soil < 2000 ? Colors.blue : Colors.brown,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: SensorCard(
+                icon: LucideIcons.waves,
+                label: 'Water Level',
+                value: sensorData.water > 500 ? 'Full' : 'Low',
+                status: 'Value: ${sensorData.water}',
+                statusColor: sensorData.water > 500 ? AppColors.accent : Colors.red,
+              ),
+            ),
+          ],
+        ),
       ],
+    );
+  }
+
+  void _showCameraUrlDialog(BuildContext context, FarmProvider provider) {
+    final TextEditingController controller = TextEditingController(
+      text: provider.cameraUrl,
+    );
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Configure Camera URL'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'e.g., http://192.168.1.39:81/stream',
+            labelText: 'Camera Stream URL',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              provider.setCameraUrl(controller.text);
+              Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
     );
   }
 }

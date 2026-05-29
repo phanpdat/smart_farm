@@ -38,8 +38,6 @@ class _ControlScreenState extends State<ControlScreen> {
           const SizedBox(height: 24),
           _buildAIDiagnosticCard(farmProvider),
           const SizedBox(height: 24),
-          _buildHistoryChart(),
-          const SizedBox(height: 24),
           Row(
             children: [
               Expanded(
@@ -225,6 +223,14 @@ class _ControlScreenState extends State<ControlScreen> {
           (val) => provider.setDevice('roof', val),
           isAuto,
         ),
+        _buildActuatorCard(
+          LucideIcons.lightbulb,
+          'Control LED',
+          'LED-05 • Status Indicator',
+          status.led,
+          (val) => provider.setDevice('led', val),
+          isAuto,
+        ),
       ],
     );
   }
@@ -294,7 +300,7 @@ class _ControlScreenState extends State<ControlScreen> {
     double score = 100.0;
     if (sensorData.temperature > 30 || sensorData.temperature < 20) score -= 5;
     if (sensorData.humidity > 80 || sensorData.humidity < 40) score -= 5;
-    if (sensorData.airQuality == 'Bad') score -= 10;
+    if (sensorData.airQuality == 'Bad' || sensorData.gas > 1000) score -= 10;
     if (!isAuto) score -= 15;
 
     return Container(
@@ -378,103 +384,6 @@ class _ControlScreenState extends State<ControlScreen> {
                   ),
                 ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHistoryChart() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.lightGreen.withAlpha(30),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              Text(
-                'Precision History',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              Text(
-                'LAST 7 DAYS',
-                style: TextStyle(
-                  fontSize: 10,
-                  color: AppColors.textTertiary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            height: 150,
-            child: BarChart(
-              BarChartData(
-                alignment: BarChartAlignment.spaceBetween,
-                maxY: 10,
-                barTouchData: BarTouchData(enabled: false),
-                titlesData: FlTitlesData(
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (val, meta) {
-                        const days = [
-                          'MON',
-                          'TUE',
-                          'WED',
-                          'THU',
-                          'FRI',
-                          'SAT',
-                          'SUN',
-                        ];
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Text(
-                            days[val.toInt()],
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: AppColors.textTertiary,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  topTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  rightTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                ),
-                gridData: FlGridData(show: false),
-                borderData: FlBorderData(show: false),
-                barGroups: List.generate(
-                  7,
-                  (i) => BarChartGroupData(
-                    x: i,
-                    barRods: [
-                      BarChartRodData(
-                        toY: [5, 6, 4, 7, 8, 9, 10][i].toDouble(),
-                        color: i == 6
-                            ? AppColors.primary
-                            : AppColors.primary.withAlpha(30),
-                        width: 30,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             ),
           ),
         ],
