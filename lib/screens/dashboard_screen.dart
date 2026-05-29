@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/sensor_card.dart';
@@ -515,7 +515,9 @@ class DashboardScreen extends StatelessWidget {
                 label: 'Gas Level',
                 value: '${sensorData.gas} ppm',
                 status: sensorData.gas < 1000 ? 'Safe' : 'Warning',
-                statusColor: sensorData.gas < 1000 ? AppColors.accent : Colors.red,
+                statusColor: sensorData.gas < 1000
+                    ? AppColors.accent
+                    : Colors.red,
               ),
             ),
             const SizedBox(width: 12),
@@ -525,7 +527,9 @@ class DashboardScreen extends StatelessWidget {
                 label: 'Rainfall',
                 value: sensorData.rain < 2000 ? 'Raining' : 'Dry',
                 status: 'Analog: ${sensorData.rain}',
-                statusColor: sensorData.rain < 2000 ? Colors.blue : Colors.orange,
+                statusColor: sensorData.rain < 2000
+                    ? Colors.blue
+                    : Colors.orange,
               ),
             ),
           ],
@@ -539,7 +543,9 @@ class DashboardScreen extends StatelessWidget {
                 label: 'Soil Sensor',
                 value: sensorData.soil < 2000 ? 'Wet' : 'Dry',
                 status: 'Value: ${sensorData.soil}',
-                statusColor: sensorData.soil < 2000 ? Colors.blue : Colors.brown,
+                statusColor: sensorData.soil < 2000
+                    ? Colors.blue
+                    : Colors.brown,
               ),
             ),
             const SizedBox(width: 12),
@@ -549,7 +555,9 @@ class DashboardScreen extends StatelessWidget {
                 label: 'Water Level',
                 value: sensorData.water > 500 ? 'Full' : 'Low',
                 status: 'Value: ${sensorData.water}',
-                statusColor: sensorData.water > 500 ? AppColors.accent : Colors.red,
+                statusColor: sensorData.water > 500
+                    ? AppColors.accent
+                    : Colors.red,
               ),
             ),
           ],
