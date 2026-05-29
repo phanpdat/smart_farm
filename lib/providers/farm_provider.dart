@@ -15,20 +15,33 @@ class FarmProvider extends ChangeNotifier {
     fan: false,
     light: false,
     roof: false,
+    led: false,
   );
   SensorData _sensorData = SensorData(
     temperature: 0.0,
     humidity: 0.0,
     lightIntensity: 0,
     airQuality: 'Offline',
+    gas: 0,
+    humid: 0.0,
+    rain: 0,
+    soil: 0,
+    water: 0,
   );
   bool _isAuto = true;
   bool _isLoading = true;
+  String _cameraUrl = 'http://172.20.10.2:81/stream';
 
   DeviceStatus get deviceStatus => _deviceStatus;
   SensorData get sensorData => _sensorData;
   bool get isAuto => _isAuto;
   bool get isLoading => _isLoading;
+  String get cameraUrl => _cameraUrl;
+
+  void setCameraUrl(String url) {
+    _cameraUrl = url;
+    notifyListeners();
+  }
 
   FarmProvider() {
     _initListeners();
