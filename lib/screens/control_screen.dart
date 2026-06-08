@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/sensor_card.dart';
@@ -35,8 +34,6 @@ class _ControlScreenState extends State<ControlScreen> {
           _buildActuatorsHeader(isAuto),
           const SizedBox(height: 16),
           _buildActuatorList(farmProvider),
-          const SizedBox(height: 24),
-          _buildAIDiagnosticCard(farmProvider),
           const SizedBox(height: 24),
           Row(
             children: [
@@ -74,9 +71,9 @@ class _ControlScreenState extends State<ControlScreen> {
         const Text(
           'SYSTEM CONFIGURATION',
           style: TextStyle(
-            fontSize: 10,
+            fontSize: 15,
             fontWeight: FontWeight.bold,
-            color: AppColors.textTertiary,
+            color: AppColors.primary,
             letterSpacing: 1.5,
           ),
         ),
@@ -287,104 +284,6 @@ class _ControlScreenState extends State<ControlScreen> {
             onChanged: isAuto ? null : onChanged,
             activeThumbColor: AppColors.primary,
             activeTrackColor: AppColors.primary.withAlpha(30),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAIDiagnosticCard(FarmProvider provider) {
-    final sensorData = provider.sensorData;
-    final isAuto = provider.isAuto;
-
-    double score = 100.0;
-    if (sensorData.temperature > 30 || sensorData.temperature < 20) score -= 5;
-    if (sensorData.humidity > 80 || sensorData.humidity < 40) score -= 5;
-    if (sensorData.airQuality == 'Bad' || sensorData.gas > 1000) score -= 10;
-    if (!isAuto) score -= 15;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border(
-          left: BorderSide(
-            color: isAuto ? AppColors.primary : Colors.orange,
-            width: 4,
-          ),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(5),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                isAuto ? LucideIcons.checkCircle : LucideIcons.alertTriangle,
-                color: isAuto ? AppColors.accent : Colors.orange,
-                size: 16,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'AI DIAGNOSTIC',
-                style: TextStyle(
-                  color: isAuto ? AppColors.accent : Colors.orange,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            isAuto ? 'Optimal Growth Cycle' : 'Manual Override Active',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            isAuto
-                ? 'System is managing hydration and lumen levels based on current sensor data. Efficiency is maximized.'
-                : 'Precision and efficiency may decrease during manual override. AI tracking remains active.',
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color:
-                  (isAuto ? AppColors.lightGreen : Colors.orange.withAlpha(10))
-                      .withAlpha(30),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Precision Score',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                Text(
-                  '${score.toStringAsFixed(1)}%',
-                  style: TextStyle(
-                    color: isAuto ? AppColors.primary : Colors.orange,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),

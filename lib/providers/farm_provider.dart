@@ -2,8 +2,11 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 import '../models/device_status.dart';
+import '../models/tomato_status.dart';
 
 class FarmProvider extends ChangeNotifier {
+  TomatoStatus _tomatoStatus = TomatoStatus.initial();
+  TomatoStatus get tomatoStatus => _tomatoStatus;
   final DatabaseReference _dbRef = FirebaseDatabase.instanceFor(
     app: Firebase.app(),
     databaseURL:
@@ -51,10 +54,17 @@ class FarmProvider extends ChangeNotifier {
     _dbRef.child('devices').onValue.listen((event) {
       debugPrint('Device data: ${event.snapshot.value}');
       if (event.snapshot.value != null) {
-        final data = event.snapshot.value as Map<dynamic, dynamic>;
-        _deviceStatus = DeviceStatus.fromMap(data);
-        _isLoading = false;
-        notifyListeners();
+        try {
+          final rawValue = event.snapshot.value;
+          if (rawValue is Map) {
+            final data = Map<dynamic, dynamic>.from(rawValue);
+            _deviceStatus = DeviceStatus.fromMap(data);
+            _isLoading = false;
+            notifyListeners();
+          }
+        } catch (e) {
+          debugPrint('Error parsing devices: $e');
+        }
       }
     });
 
@@ -62,10 +72,13 @@ class FarmProvider extends ChangeNotifier {
       debugPrint('Settings data: ${event.snapshot.value}');
       if (event.snapshot.value != null) {
         try {
-          final data = Map<dynamic, dynamic>.from(event.snapshot.value as Map);
-          _isAuto = data['auto'] ?? true;
-          debugPrint('Updated isAuto to: $_isAuto');
-          notifyListeners();
+          final rawValue = event.snapshot.value;
+          if (rawValue is Map) {
+            final data = Map<dynamic, dynamic>.from(rawValue);
+            _isAuto = data['auto'] ?? true;
+            debugPrint('Updated isAuto to: $_isAuto');
+            notifyListeners();
+          }
         } catch (e) {
           debugPrint('Error parsing settings: $e');
         }
@@ -77,9 +90,34 @@ class FarmProvider extends ChangeNotifier {
     _dbRef.child('sensors').onValue.listen((event) {
       debugPrint('Sensor data: ${event.snapshot.value}');
       if (event.snapshot.value != null) {
-        final data = event.snapshot.value as Map<dynamic, dynamic>;
-        _sensorData = SensorData.fromMap(data);
-        notifyListeners();
+        try {
+          final rawValue = event.snapshot.value;
+          if (rawValue is Map) {
+            final data = Map<dynamic, dynamic>.from(rawValue);
+            _sensorData = SensorData.fromMap(data);
+            notifyListeners();
+          }
+        } catch (e) {
+          debugPrint('Error parsing sensors: $e');
+        }
+      }
+    });
+
+    _dbRef.child('tomato_status').onValue.listen((event) {
+      debugPrint('Tomato status data: ${event.snapshot.value}');
+      if (event.snapshot.value != null) {
+        try {
+          final rawValue = event.snapshot.value;
+          if (rawValue is Map) {
+            final data = Map<dynamic, dynamic>.from(rawValue);
+            _tomatoStatus = TomatoStatus.fromMap(data);
+            notifyListeners();
+          } else {
+            debugPrint('tomato_status data is not a Map: $rawValue');
+          }
+        } catch (e) {
+          debugPrint('Error parsing tomato_status: $e');
+        }
       }
     });
   }

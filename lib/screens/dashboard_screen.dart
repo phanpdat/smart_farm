@@ -7,6 +7,7 @@ import '../theme/app_colors.dart';
 import '../widgets/sensor_card.dart';
 import '../widgets/action_toggle.dart';
 import '../providers/farm_provider.dart';
+import '../models/tomato_status.dart';
 import 'package:flutter_mjpeg/flutter_mjpeg.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -16,6 +17,7 @@ class DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final farmProvider = Provider.of<FarmProvider>(context);
     final sensorData = farmProvider.sensorData;
+    final tomatoStatus = farmProvider.tomatoStatus;
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -25,12 +27,8 @@ class DashboardScreen extends StatelessWidget {
         children: [
           const SizedBox(height: 50),
           _buildHeader(),
-          const SizedBox(height: 24),
-          _buildHeroCard(context, farmProvider),
           const SizedBox(height: 20),
-          _buildGrowthVelocityChart(),
-          const SizedBox(height: 20),
-          _buildQuickActionGrid(farmProvider),
+          _buildEstimatedHarvestCard(tomatoStatus),
           const SizedBox(height: 24),
           _buildSensorGrid(sensorData),
           const SizedBox(height: 32),
@@ -39,28 +37,100 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildEstimatedHarvestCard(TomatoStatus status) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.2),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(
+                LucideIcons.leaf,
+                color: Colors.white70,
+                size: 18,
+              ),
+              SizedBox(width: 8),
+              Text(
+                'HARVEST RECOMMENDATION',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            status.harvestRecommendation.isEmpty
+                ? 'Waiting for harvest recommendation data...'
+                : status.harvestRecommendation,
+            style: GoogleFonts.outfit(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  LucideIcons.activity,
+                  color: Colors.white,
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Stage: ${status.ripenessStage} (${status.ripenessLevel})',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHeader() {
     return Row(
       children: [
-        const CircleAvatar(
-          radius: 18,
-          backgroundImage: NetworkImage('https://i.pravatar.cc/100?u=farmer'),
-        ),
-        const SizedBox(width: 12),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Digital Agrarian',
+              'Smart Farm System',
               style: GoogleFonts.outfit(
-                fontSize: 14,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: AppColors.primary,
               ),
-            ),
-            const Text(
-              'Smart Farm System',
-              style: TextStyle(fontSize: 10, color: AppColors.textTertiary),
             ),
           ],
         ),
