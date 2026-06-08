@@ -46,7 +46,6 @@ class _MainScreenState extends State<MainScreen> {
             _buildNavItem(0, LucideIcons.layoutDashboard, 'DASHBOARD'),
             _buildNavItem(1, LucideIcons.mousePointer, 'CONTROL'),
             _buildNavItem(2, LucideIcons.briefcase, 'DOCTOR'),
-            _buildNavItem(3, LucideIcons.bookOpen, 'JOURNAL'),
           ],
         ),
       ),

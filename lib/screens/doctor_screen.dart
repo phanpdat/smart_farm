@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../theme/app_colors.dart';
+import '../providers/farm_provider.dart';
+import '../models/tomato_status.dart';
 
 class DoctorScreen extends StatefulWidget {
   const DoctorScreen({super.key});
@@ -15,6 +19,9 @@ class _DoctorScreenState extends State<DoctorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final farmProvider = Provider.of<FarmProvider>(context);
+    final status = farmProvider.tomatoStatus;
+
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -22,26 +29,24 @@ class _DoctorScreenState extends State<DoctorScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 50),
-          _buildTopBar(),
+          _buildTopBar(status),
           const SizedBox(height: 24),
           _buildSectorSelector(),
           const SizedBox(height: 24),
-          _buildCameraView(),
+          _buildCameraView(status),
           const SizedBox(height: 24),
-          _buildWatchlist(),
+          _buildDiagnosticResult(status),
           const SizedBox(height: 24),
-          _buildDiagnosticResult(),
+          _buildTreatmentPlan(status),
           const SizedBox(height: 24),
-          _buildTreatmentPlan(),
-          const SizedBox(height: 24),
-          _buildStatusBadge(),
+          _buildStatusBadge(status),
           const SizedBox(height: 32),
         ],
       ),
     );
   }
 
-  Widget _buildTopBar() {
+  Widget _buildTopBar(TomatoStatus status) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -53,7 +58,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
               color: AppColors.primary,
               size: 28,
             ),
-            _buildOnlineBadge(),
+            _buildOnlineBadge(status),
           ],
         ),
         const SizedBox(height: 12),
@@ -66,18 +71,21 @@ class _DoctorScreenState extends State<DoctorScreen> {
           ),
         ),
         const Text(
-          'Real-time pest detection via ESP32-CAM (Sector 04)',
+          'Real-time tomato disease detection & diagnostics',
           style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
         ),
       ],
     );
   }
 
-  Widget _buildOnlineBadge() {
+  Widget _buildOnlineBadge(TomatoStatus status) {
+    final hasData = status.lastUpdate > 0;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.lightGreen.withAlpha(50),
+        color: hasData
+            ? AppColors.lightGreen.withValues(alpha: 0.5)
+            : AppColors.error.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -86,16 +94,16 @@ class _DoctorScreenState extends State<DoctorScreen> {
           Container(
             width: 8,
             height: 8,
-            decoration: const BoxDecoration(
-              color: AppColors.accent,
+            decoration: BoxDecoration(
+              color: hasData ? AppColors.accent : AppColors.error,
               shape: BoxShape.circle,
             ),
           ),
           const SizedBox(width: 8),
-          const Text(
-            'Online',
+          Text(
+            hasData ? 'Active' : 'Offline',
             style: TextStyle(
-              color: AppColors.accent,
+              color: hasData ? AppColors.accent : AppColors.error,
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
@@ -141,16 +149,21 @@ class _DoctorScreenState extends State<DoctorScreen> {
     );
   }
 
-  Widget _buildCameraView() {
+  Widget _buildCameraView(TomatoStatus status) {
+    final bool hasDisease =
+        status.diseaseStatus.toLowerCase() != 'none' &&
+        status.diseaseStatus.isNotEmpty;
+    final String imageUrl = status.imageUrl.isNotEmpty
+        ? status.imageUrl
+        : 'https://images.unsplash.com/photo-1592419044706-39796d40f98c?q=80&w=1000&auto=format&fit=crop';
+
     return Container(
       width: double.infinity,
       height: 240,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        image: const DecorationImage(
-          image: NetworkImage(
-            'https://images.unsplash.com/photo-1592419044706-39796d40f98c?q=80&w=1000&auto=format&fit=crop',
-          ),
+        image: DecorationImage(
+          image: NetworkImage(imageUrl),
           fit: BoxFit.cover,
         ),
       ),
@@ -158,20 +171,23 @@ class _DoctorScreenState extends State<DoctorScreen> {
         children: [
           Center(
             child: Container(
-              width: 140,
-              height: 140,
+              width: 160,
+              height: 160,
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.red, width: 2),
+                border: Border.all(
+                  color: hasDisease ? Colors.red : Colors.green,
+                  width: 2,
+                ),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Stack(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(4),
-                    color: Colors.red,
-                    child: const Text(
-                      'PEST DETECTED',
-                      style: TextStyle(
+                    padding: const EdgeInsets.all(6),
+                    color: hasDisease ? Colors.red : Colors.green,
+                    child: Text(
+                      hasDisease ? 'DISEASE DETECTED' : 'HEALTHY',
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 8,
                         fontWeight: FontWeight.bold,
@@ -185,133 +201,25 @@ class _DoctorScreenState extends State<DoctorScreen> {
           Positioned(
             bottom: 20,
             left: 20,
-            child: Row(
-              children: const [
-                Icon(LucideIcons.video, size: 16, color: Colors.white),
-                SizedBox(width: 8),
-                Text(
-                  'LIVE: SECTOR_04_CAM_A',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: const [
+                  Icon(LucideIcons.video, size: 14, color: Colors.white),
+                  SizedBox(width: 6),
+                  Text(
+                    'AI ANALYSIS FEED',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            bottom: 20,
-            right: 20,
-            child: const Icon(
-              LucideIcons.expand,
-              color: Colors.white,
-              size: 24,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWatchlist() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.lightGreen.withAlpha(20),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: const [
-              Icon(
-                LucideIcons.clipboardList,
-                size: 20,
-                color: AppColors.primary,
-              ),
-              SizedBox(width: 10),
-              Text(
-                'Cabbage Watchlist',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildWatchlistItem(
-            LucideIcons.bug,
-            'Pest holes',
-            'Detected 2 mins ago',
-            'ACTIVE ALERT',
-            Colors.red,
-          ),
-          const SizedBox(height: 12),
-          _buildWatchlistItem(
-            LucideIcons.droplets,
-            'Yellowing',
-            'Last seen: 48h ago',
-            'RESOLVED',
-            AppColors.textTertiary,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWatchlistItem(
-    IconData icon,
-    String title,
-    String subtitle,
-    String status,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withAlpha(10),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: color.withAlpha(10),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              status,
-              style: TextStyle(
-                color: color,
-                fontSize: 8,
-                fontWeight: FontWeight.bold,
+                ],
               ),
             ),
           ),
@@ -320,22 +228,38 @@ class _DoctorScreenState extends State<DoctorScreen> {
     );
   }
 
-  Widget _buildDiagnosticResult() {
+  Widget _buildDiagnosticResult(TomatoStatus status) {
+    final bool hasDisease =
+        status.diseaseStatus.toLowerCase() != 'none' &&
+        status.diseaseStatus.isNotEmpty;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border(left: BorderSide(color: Colors.red, width: 4)),
+        border: Border(
+          left: BorderSide(
+            color: hasDisease ? AppColors.error : AppColors.accent,
+            width: 4,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              Text(
+            children: [
+              const Text(
                 'DIAGNOSTIC RESULT',
                 style: TextStyle(
                   fontSize: 10,
@@ -344,44 +268,59 @@ class _DoctorScreenState extends State<DoctorScreen> {
                   letterSpacing: 1.5,
                 ),
               ),
-              Text(
-                '92%',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red,
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: (hasDisease ? AppColors.error : AppColors.accent)
+                      .withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  status.diseaseStatus.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: hasDisease ? AppColors.error : AppColors.accent,
+                  ),
                 ),
               ),
             ],
           ),
-          const Text(
-            'Pest / Sâu ăn lá',
+          const SizedBox(height: 8),
+          Text(
+            status.diseaseName,
             style: TextStyle(
-              fontSize: 28,
+              fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Colors.red,
+              color: hasDisease ? AppColors.error : AppColors.textMain,
             ),
           ),
-          const Text(
-            'CONFIDENCE',
-            style: TextStyle(fontSize: 10, color: AppColors.textTertiary),
-          ),
-          const SizedBox(height: 12),
-          LinearProgressIndicator(
-            value: 0.92,
-            backgroundColor: Colors.red.withAlpha(10),
-            color: Colors.red,
-            minHeight: 6,
-          ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
+          const Divider(height: 1),
+          const SizedBox(height: 16),
           Row(
-            children: const [
-              Icon(LucideIcons.alertCircle, color: Colors.red, size: 20),
-              SizedBox(width: 12),
+            children: [
+              Icon(
+                hasDisease
+                    ? LucideIcons.alertTriangle
+                    : LucideIcons.checkCircle,
+                color: hasDisease ? AppColors.error : AppColors.accent,
+                size: 20,
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Critical intervention required in Sector 04',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                  hasDisease
+                      ? 'AI warning: Attention required for disease control.'
+                      : 'Crops appear normal and healthy. No action needed.',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: AppColors.textMain,
+                  ),
                 ),
               ),
             ],
@@ -391,7 +330,8 @@ class _DoctorScreenState extends State<DoctorScreen> {
     );
   }
 
-  Widget _buildTreatmentPlan() {
+  Widget _buildTreatmentPlan(TomatoStatus status) {
+    final bool hasTreatment = status.treatmentStepByStep.isNotEmpty;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -417,68 +357,67 @@ class _DoctorScreenState extends State<DoctorScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          RichText(
-            text: const TextSpan(
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 15,
-                height: 1.5,
+          Text(
+            hasTreatment
+                ? status.treatmentStepByStep
+                : 'Crops are healthy. No active treatment plan is required at this time.',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              height: 1.5,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          if (hasTreatment) ...[
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {},
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.lightGreen,
+                foregroundColor: AppColors.primary,
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              children: [
-                TextSpan(text: 'Treat with Bio-control: Use '),
-                TextSpan(
-                  text: 'Neem oil bio-pesticide',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    decoration: TextDecoration.underline,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(LucideIcons.checkCircle, size: 18),
+                  SizedBox(width: 8),
+                  Text(
+                    'Acknowledge & Schedule',
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
-                ),
-                TextSpan(text: ' for Sector 04 immediately.'),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.lightGreen,
-              foregroundColor: AppColors.primary,
-              minimumSize: const Size(double.infinity, 50),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                ],
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(LucideIcons.checkCircle, size: 18),
-                SizedBox(width: 8),
-                Text(
-                  'Acknowledge & Schedule',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-          ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildStatusBadge() {
+  Widget _buildStatusBadge(TomatoStatus status) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.blue.withAlpha(10),
+              color: Colors.blue.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(LucideIcons.cpu, color: Colors.blue, size: 20),
@@ -487,8 +426,8 @@ class _DoctorScreenState extends State<DoctorScreen> {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
+              children: [
+                const Text(
                   'AI DIAGNOSTIC ACTIVE',
                   style: TextStyle(
                     fontSize: 10,
@@ -497,9 +436,12 @@ class _DoctorScreenState extends State<DoctorScreen> {
                     letterSpacing: 1,
                   ),
                 ),
+                const SizedBox(height: 2),
                 Text(
-                  'Continuous scanning enabled for Sector 04.',
-                  style: TextStyle(
+                  status.lastUpdate > 0
+                      ? 'Last scanned: ${_formatTimestamp(status.lastUpdate)}'
+                      : 'Continuous scanning enabled for Sector 04.',
+                  style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 11,
                   ),
@@ -510,5 +452,11 @@ class _DoctorScreenState extends State<DoctorScreen> {
         ],
       ),
     );
+  }
+
+  String _formatTimestamp(int timestamp) {
+    if (timestamp == 0) return 'Never';
+    final dt = DateTime.fromMillisecondsSinceEpoch(timestamp);
+    return DateFormat('dd/MM/yyyy HH:mm:ss').format(dt);
   }
 }
