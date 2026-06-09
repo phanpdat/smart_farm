@@ -51,6 +51,8 @@ class FarmProvider extends ChangeNotifier {
   int _selectedScanIndex = 0;
   int get selectedScanIndex => _selectedScanIndex;
 
+  final SharedPreferences _prefs;
+
   void setSelectedScanIndex(int index) {
     if (index >= 0 && index < _savedScans.length) {
       _selectedScanIndex = index;
@@ -63,7 +65,7 @@ class FarmProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  FarmProvider() {
+  FarmProvider(this._prefs) {
     _init();
   }
 
@@ -176,18 +178,28 @@ class FarmProvider extends ChangeNotifier {
 
   Future<void> loadHistoryFromLocal() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? jsonStr = prefs.getString('saved_scans');
+      final String? jsonStr = _prefs.getString('saved_scans');
+      debugPrint('SharedPreferences raw saved_scans: $jsonStr');
       if (jsonStr != null) {
         final List<dynamic> decoded = jsonDecode(jsonStr);
         _savedScans = decoded
-            .map((item) => DiagnosticRecord.fromJson(item as Map<String, dynamic>))
+            .map(
+              (item) => DiagnosticRecord.fromJson(
+                Map<String, dynamic>.from(item as Map),
+              ),
+            )
             .toList();
-        
+
+        debugPrint(
+          'Successfully loaded ${_savedScans.length} scans from SharedPreferences.',
+        );
         if (_savedScans.isNotEmpty) {
-          _selectedScanIndex = _savedScans.length - 1; // Select the most recent one
+          _selectedScanIndex =
+              _savedScans.length - 1; // Select the most recent one
         }
         notifyListeners();
+      } else {
+        debugPrint('No saved scans found in SharedPreferences.');
       }
     } catch (e) {
       debugPrint('Error loading saved scans: $e');
@@ -198,7 +210,9 @@ class FarmProvider extends ChangeNotifier {
     if (status.lastUpdate == 0) return;
 
     // Check for duplicate based on lastUpdate
-    final isDuplicate = _savedScans.any((r) => r.lastUpdate == status.lastUpdate);
+    final isDuplicate = _savedScans.any(
+      (r) => r.lastUpdate == status.lastUpdate,
+    );
     if (isDuplicate) return;
 
     final newRecord = DiagnosticRecord(
@@ -231,9 +245,10 @@ class FarmProvider extends ChangeNotifier {
 
   Future<void> _saveHistoryToLocal() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
       final toEncode = _savedScans.map((r) => r.toJson()).toList();
-      await prefs.setString('saved_scans', jsonEncode(toEncode));
+      final jsonStr = jsonEncode(toEncode);
+      await _prefs.setString('saved_scans', jsonStr);
+      debugPrint('Saved scans to SharedPreferences: $jsonStr');
     } catch (e) {
       debugPrint('Error saving history: $e');
     }

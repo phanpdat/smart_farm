@@ -22,7 +22,6 @@ class _DoctorScreenState extends State<DoctorScreen> {
     final scans = farmProvider.savedScans;
     final selectedIndex = farmProvider.selectedScanIndex;
 
-    // Determine what status to display in the main details
     final TomatoStatus displayStatus;
     if (scans.isNotEmpty && selectedIndex < scans.length) {
       final record = scans[selectedIndex];
@@ -569,96 +568,101 @@ class _DoctorScreenState extends State<DoctorScreen> {
                     ),
                   ],
                 ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: record.imageUrl.isNotEmpty
-                        ? Image.network(
-                            record.imageUrl,
-                            width: 48,
-                            height: 48,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                Container(
-                                  color: AppColors.lightGreen,
-                                  width: 48,
-                                  height: 48,
-                                  child: const Icon(
-                                    LucideIcons.image,
-                                    color: AppColors.primary,
-                                    size: 20,
-                                  ),
-                                ),
-                          )
-                        : Container(
-                            color: AppColors.lightGreen,
-                            width: 48,
-                            height: 48,
-                            child: const Icon(
-                              LucideIcons.image,
-                              color: AppColors.primary,
-                              size: 20,
-                            ),
-                          ),
-                  ),
-                  title: Text(
-                    'Sector 0${index + 1}: ${record.diseaseName}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                child: Material(
+                  color: Colors.transparent,
+                  clipBehavior: Clip.antiAlias,
+                  borderRadius: BorderRadius.circular(16),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
                     ),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Status: ${record.diseaseStatus}',
-                        style: TextStyle(
-                          color: hasDisease
-                              ? AppColors.error
-                              : AppColors.accent,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 11,
-                        ),
-                      ),
-                      Text(
-                        dateStr,
-                        style: const TextStyle(
-                          color: AppColors.textTertiary,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(
-                          LucideIcons.trash2,
-                          color: AppColors.error,
-                          size: 20,
-                        ),
-                        onPressed: () {
-                          farmProvider.deleteDiagnostic(record.lastUpdate);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Log deleted successfully.'),
+                    leading: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: record.imageUrl.isNotEmpty
+                          ? Image.network(
+                              record.imageUrl,
+                              width: 48,
+                              height: 48,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
+                                    color: AppColors.lightGreen,
+                                    width: 48,
+                                    height: 48,
+                                    child: const Icon(
+                                      LucideIcons.image,
+                                      color: AppColors.primary,
+                                      size: 20,
+                                    ),
+                                  ),
+                            )
+                          : Container(
+                              color: AppColors.lightGreen,
+                              width: 48,
+                              height: 48,
+                              child: const Icon(
+                                LucideIcons.image,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
                             ),
-                          );
-                        },
+                    ),
+                    title: Text(
+                      'Sector 0${index + 1}: ${record.diseaseName}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
-                      const Icon(
-                        Icons.chevron_right,
-                        color: AppColors.textTertiary,
-                      ),
-                    ],
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Status: ${record.diseaseStatus}',
+                          style: TextStyle(
+                            color: hasDisease
+                                ? AppColors.error
+                                : AppColors.accent,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                          ),
+                        ),
+                        Text(
+                          dateStr,
+                          style: const TextStyle(
+                            color: AppColors.textTertiary,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            LucideIcons.trash2,
+                            color: AppColors.error,
+                            size: 20,
+                          ),
+                          onPressed: () {
+                            farmProvider.deleteDiagnostic(record.lastUpdate);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Log deleted successfully.'),
+                              ),
+                            );
+                          },
+                        ),
+                        const Icon(
+                          Icons.chevron_right,
+                          color: AppColors.textTertiary,
+                        ),
+                      ],
+                    ),
+                    onTap: () => farmProvider.setSelectedScanIndex(index),
                   ),
-                  onTap: () => farmProvider.setSelectedScanIndex(index),
                 ),
               );
             },
