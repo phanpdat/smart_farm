@@ -1,12 +1,19 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/device_status.dart';
 import '../models/tomato_status.dart';
+import '../models/diagnostic_record.dart';
 
 class FarmProvider extends ChangeNotifier {
   TomatoStatus _tomatoStatus = TomatoStatus.initial();
   TomatoStatus get tomatoStatus => _tomatoStatus;
+
+  List<DiagnosticRecord> _savedScans = [];
+  List<DiagnosticRecord> get savedScans => _savedScans;
+
   final DatabaseReference _dbRef = FirebaseDatabase.instanceFor(
     app: Firebase.app(),
     databaseURL:
@@ -41,12 +48,23 @@ class FarmProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String get cameraUrl => _cameraUrl;
 
+  int _selectedScanIndex = 0;
+  int get selectedScanIndex => _selectedScanIndex;
+
+  void setSelectedScanIndex(int index) {
+    if (index >= 0 && index < _savedScans.length) {
+      _selectedScanIndex = index;
+      notifyListeners();
+    }
+  }
+
   void setCameraUrl(String url) {
     _cameraUrl = url;
     notifyListeners();
   }
 
   FarmProvider() {
+    loadHistoryFromLocal();
     _initListeners();
   }
 
@@ -112,6 +130,8 @@ class FarmProvider extends ChangeNotifier {
             final data = Map<dynamic, dynamic>.from(rawValue);
             _tomatoStatus = TomatoStatus.fromMap(data);
             notifyListeners();
+            // Automatically save as a new scan / sector
+            saveDiagnostic(_tomatoStatus);
           } else {
             debugPrint('tomato_status data is not a Map: $rawValue');
           }
@@ -147,6 +167,71 @@ class FarmProvider extends ChangeNotifier {
       await _dbRef.child('settings').update({'auto': auto});
     } catch (e) {
       debugPrint('Error setting auto mode: $e');
+    }
+  }
+
+  Future<void> loadHistoryFromLocal() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? jsonStr = prefs.getString('saved_scans');
+      if (jsonStr != null) {
+        final List<dynamic> decoded = jsonDecode(jsonStr);
+        _savedScans = decoded
+            .map((item) => DiagnosticRecord.fromJson(item as Map<String, dynamic>))
+            .toList();
+        
+        if (_savedScans.isNotEmpty) {
+          _selectedScanIndex = _savedScans.length - 1; // Select the most recent one
+        }
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error loading saved scans: $e');
+    }
+  }
+
+  Future<void> saveDiagnostic(TomatoStatus status) async {
+    if (status.lastUpdate == 0) return;
+
+    // Check for duplicate based on lastUpdate
+    final isDuplicate = _savedScans.any((r) => r.lastUpdate == status.lastUpdate);
+    if (isDuplicate) return;
+
+    final newRecord = DiagnosticRecord(
+      diseaseName: status.diseaseName,
+      diseaseStatus: status.diseaseStatus,
+      imageUrl: status.imageUrl,
+      lastUpdate: status.lastUpdate,
+      treatmentStepByStep: status.treatmentStepByStep,
+      ripenessLevel: status.ripenessLevel,
+      ripenessStage: status.ripenessStage,
+      harvestRecommendation: status.harvestRecommendation,
+    );
+
+    _savedScans.add(newRecord);
+    _selectedScanIndex = _savedScans.length - 1; // Auto-select the newest
+    notifyListeners();
+
+    await _saveHistoryToLocal();
+  }
+
+  Future<void> deleteDiagnostic(int lastUpdate) async {
+    _savedScans.removeWhere((r) => r.lastUpdate == lastUpdate);
+    if (_selectedScanIndex >= _savedScans.length) {
+      _selectedScanIndex = _savedScans.isNotEmpty ? _savedScans.length - 1 : 0;
+    }
+    notifyListeners();
+
+    await _saveHistoryToLocal();
+  }
+
+  Future<void> _saveHistoryToLocal() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final toEncode = _savedScans.map((r) => r.toJson()).toList();
+      await prefs.setString('saved_scans', jsonEncode(toEncode));
+    } catch (e) {
+      debugPrint('Error saving history: $e');
     }
   }
 }

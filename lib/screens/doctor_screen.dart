@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../theme/app_colors.dart';
 import '../providers/farm_provider.dart';
 import '../models/tomato_status.dart';
+import 'treatment_detail_screen.dart';
 
 class DoctorScreen extends StatefulWidget {
   const DoctorScreen({super.key});
@@ -15,12 +16,29 @@ class DoctorScreen extends StatefulWidget {
 }
 
 class _DoctorScreenState extends State<DoctorScreen> {
-  int selectedSector = 4;
-
   @override
   Widget build(BuildContext context) {
     final farmProvider = Provider.of<FarmProvider>(context);
-    final status = farmProvider.tomatoStatus;
+    final scans = farmProvider.savedScans;
+    final selectedIndex = farmProvider.selectedScanIndex;
+
+    // Determine what status to display in the main details
+    final TomatoStatus displayStatus;
+    if (scans.isNotEmpty && selectedIndex < scans.length) {
+      final record = scans[selectedIndex];
+      displayStatus = TomatoStatus(
+        diseaseName: record.diseaseName,
+        diseaseStatus: record.diseaseStatus,
+        imageUrl: record.imageUrl,
+        lastUpdate: record.lastUpdate,
+        treatmentStepByStep: record.treatmentStepByStep,
+        ripenessLevel: record.ripenessLevel,
+        ripenessStage: record.ripenessStage,
+        harvestRecommendation: record.harvestRecommendation,
+      );
+    } else {
+      displayStatus = farmProvider.tomatoStatus;
+    }
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -29,17 +47,41 @@ class _DoctorScreenState extends State<DoctorScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 50),
-          _buildTopBar(status),
+          _buildTopBar(displayStatus),
           const SizedBox(height: 24),
-          _buildSectorSelector(),
+          _buildSectorSelector(farmProvider),
+          if (displayStatus.lastUpdate > 0) ...[
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Row(
+                children: [
+                  const Icon(
+                    LucideIcons.clock,
+                    size: 14,
+                    color: AppColors.textTertiary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Last scanned: ${_formatTimestamp(displayStatus.lastUpdate)}',
+                    style: const TextStyle(
+                      color: AppColors.textTertiary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 24),
-          _buildCameraView(status),
+          _buildCameraView(displayStatus),
           const SizedBox(height: 24),
-          _buildDiagnosticResult(status),
+          _buildDiagnosticResult(displayStatus),
           const SizedBox(height: 24),
-          _buildTreatmentPlan(status),
+          _buildTreatmentPlan(displayStatus),
           const SizedBox(height: 24),
-          _buildStatusBadge(status),
+          _buildHistoryList(context, farmProvider),
           const SizedBox(height: 32),
         ],
       ),
@@ -113,38 +155,62 @@ class _DoctorScreenState extends State<DoctorScreen> {
     );
   }
 
-  Widget _buildSectorSelector() {
+  Widget _buildSectorSelector(FarmProvider farmProvider) {
+    final scans = farmProvider.savedScans;
+    if (scans.isEmpty) {
+      return Container(
+        height: 50,
+        decoration: BoxDecoration(
+          color: AppColors.lightGreen.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Center(
+          child: Text(
+            'Sector 01 (Live scan...)',
+            style: TextStyle(
+              color: AppColors.primary,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+        ),
+      );
+    }
+
     return Container(
+      height: 50,
       decoration: BoxDecoration(
-        color: AppColors.lightGreen.withAlpha(30),
+        color: AppColors.lightGreen.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
-        children: [4, 5, 6].map((it) {
-          bool isSelected = selectedSector == it;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => selectedSector = it),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: isSelected ? AppColors.primary : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Text(
-                    'Sector 0$it',
-                    style: TextStyle(
-                      color: isSelected ? Colors.white : AppColors.primary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: scans.length,
+        itemBuilder: (context, index) {
+          final isSelected = farmProvider.selectedScanIndex == index;
+          return GestureDetector(
+            onTap: () => farmProvider.setSelectedScanIndex(index),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.primary : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Center(
+                child: Text(
+                  'Sector 0${index + 1}',
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
                   ),
                 ),
               ),
             ),
           );
-        }).toList(),
+        },
       ),
     );
   }
@@ -332,6 +398,11 @@ class _DoctorScreenState extends State<DoctorScreen> {
 
   Widget _buildTreatmentPlan(TomatoStatus status) {
     final bool hasTreatment = status.treatmentStepByStep.isNotEmpty;
+    final farmProvider = Provider.of<FarmProvider>(context, listen: false);
+    final sectorName = farmProvider.savedScans.isNotEmpty
+        ? 'Sector 0${farmProvider.selectedScanIndex + 1}'
+        : 'Sector 01';
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -361,6 +432,10 @@ class _DoctorScreenState extends State<DoctorScreen> {
             hasTreatment
                 ? status.treatmentStepByStep
                 : 'Crops are healthy. No active treatment plan is required at this time.',
+            maxLines: hasTreatment ? 2 : 5,
+            overflow: hasTreatment
+                ? TextOverflow.ellipsis
+                : TextOverflow.visible,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 15,
@@ -369,9 +444,18 @@ class _DoctorScreenState extends State<DoctorScreen> {
             ),
           ),
           if (hasTreatment) ...[
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => TreatmentDetailScreen(
+                      status: status,
+                      sectorName: sectorName,
+                    ),
+                  ),
+                );
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.lightGreen,
                 foregroundColor: AppColors.primary,
@@ -383,10 +467,10 @@ class _DoctorScreenState extends State<DoctorScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: const [
-                  Icon(LucideIcons.checkCircle, size: 18),
+                  Icon(LucideIcons.eye, size: 18),
                   SizedBox(width: 8),
                   Text(
-                    'Acknowledge & Schedule',
+                    'Xem phác đồ chi tiết',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ],
@@ -398,65 +482,188 @@ class _DoctorScreenState extends State<DoctorScreen> {
     );
   }
 
-  Widget _buildStatusBadge(TomatoStatus status) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.blue.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(LucideIcons.cpu, color: Colors.blue, size: 20),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'AI DIAGNOSTIC ACTIVE',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue,
-                    letterSpacing: 1,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  status.lastUpdate > 0
-                      ? 'Last scanned: ${_formatTimestamp(status.lastUpdate)}'
-                      : 'Continuous scanning enabled for Sector 04.',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   String _formatTimestamp(int timestamp) {
     if (timestamp == 0) return 'Never';
     final dt = DateTime.fromMillisecondsSinceEpoch(timestamp);
     return DateFormat('dd/MM/yyyy HH:mm:ss').format(dt);
+  }
+
+  Widget _buildHistoryList(BuildContext context, FarmProvider farmProvider) {
+    final records = farmProvider.savedScans;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Diagnostic Logs (All Sectors)',
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textMain,
+              ),
+            ),
+            if (records.isNotEmpty)
+              Text(
+                '${records.length} saved',
+                style: const TextStyle(
+                  color: AppColors.textTertiary,
+                  fontSize: 12,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (records.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              children: const [
+                Icon(
+                  LucideIcons.folderOpen,
+                  color: AppColors.textTertiary,
+                  size: 36,
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'No diagnostic logs found. Waiting for AI scan...',
+                  style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          )
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: records.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final record = records[index];
+              final dateStr = DateFormat(
+                'dd/MM/yyyy HH:mm:ss',
+              ).format(DateTime.fromMillisecondsSinceEpoch(record.lastUpdate));
+              final hasDisease = record.diseaseStatus.toLowerCase() != 'none';
+              final isSelected = farmProvider.selectedScanIndex == index;
+
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: isSelected
+                      ? Border.all(color: AppColors.primary, width: 1.5)
+                      : null,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.02),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  leading: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: record.imageUrl.isNotEmpty
+                        ? Image.network(
+                            record.imageUrl,
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                                  color: AppColors.lightGreen,
+                                  width: 48,
+                                  height: 48,
+                                  child: const Icon(
+                                    LucideIcons.image,
+                                    color: AppColors.primary,
+                                    size: 20,
+                                  ),
+                                ),
+                          )
+                        : Container(
+                            color: AppColors.lightGreen,
+                            width: 48,
+                            height: 48,
+                            child: const Icon(
+                              LucideIcons.image,
+                              color: AppColors.primary,
+                              size: 20,
+                            ),
+                          ),
+                  ),
+                  title: Text(
+                    'Sector 0${index + 1}: ${record.diseaseName}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Status: ${record.diseaseStatus}',
+                        style: TextStyle(
+                          color: hasDisease
+                              ? AppColors.error
+                              : AppColors.accent,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                        ),
+                      ),
+                      Text(
+                        dateStr,
+                        style: const TextStyle(
+                          color: AppColors.textTertiary,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(
+                          LucideIcons.trash2,
+                          color: AppColors.error,
+                          size: 20,
+                        ),
+                        onPressed: () {
+                          farmProvider.deleteDiagnostic(record.lastUpdate);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Log deleted successfully.'),
+                            ),
+                          );
+                        },
+                      ),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: AppColors.textTertiary,
+                      ),
+                    ],
+                  ),
+                  onTap: () => farmProvider.setSelectedScanIndex(index),
+                ),
+              );
+            },
+          ),
+      ],
+    );
   }
 }
