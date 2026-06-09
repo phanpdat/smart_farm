@@ -64,7 +64,11 @@ class FarmProvider extends ChangeNotifier {
   }
 
   FarmProvider() {
-    loadHistoryFromLocal();
+    _init();
+  }
+
+  Future<void> _init() async {
+    await loadHistoryFromLocal();
     _initListeners();
   }
 
