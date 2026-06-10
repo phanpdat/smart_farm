@@ -204,14 +204,7 @@ class _ControlScreenState extends State<ControlScreen> {
           (val) => provider.setDevice('fan', val),
           isAuto,
         ),
-        _buildActuatorCard(
-          LucideIcons.sun,
-          'Grow Light',
-          'LED-09 • Full Spectrum Array',
-          status.light,
-          (val) => provider.setDevice('light', val),
-          isAuto,
-        ),
+
         _buildActuatorCard(
           LucideIcons.home,
           'Servo Roof',

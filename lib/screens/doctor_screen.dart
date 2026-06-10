@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -215,80 +216,23 @@ class _DoctorScreenState extends State<DoctorScreen> {
   }
 
   Widget _buildCameraView(TomatoStatus status) {
-    final bool hasDisease =
-        status.diseaseStatus.toLowerCase() != 'none' &&
-        status.diseaseStatus.isNotEmpty;
     final String imageUrl = status.imageUrl.isNotEmpty
         ? status.imageUrl
         : 'https://images.unsplash.com/photo-1592419044706-39796d40f98c?q=80&w=1000&auto=format&fit=crop';
+
+    final ImageProvider imageProvider;
+    if (imageUrl.startsWith('http')) {
+      imageProvider = NetworkImage(imageUrl);
+    } else {
+      imageProvider = FileImage(File(imageUrl));
+    }
 
     return Container(
       width: double.infinity,
       height: 240,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        image: DecorationImage(
-          image: NetworkImage(imageUrl),
-          fit: BoxFit.cover,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Center(
-            child: Container(
-              width: 160,
-              height: 160,
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: hasDisease ? Colors.red : Colors.green,
-                  width: 2,
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Stack(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    color: hasDisease ? Colors.red : Colors.green,
-                    child: Text(
-                      hasDisease ? 'DISEASE DETECTED' : 'HEALTHY',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 8,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 20,
-            left: 20,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: const [
-                  Icon(LucideIcons.video, size: 14, color: Colors.white),
-                  SizedBox(width: 6),
-                  Text(
-                    'AI ANALYSIS FEED',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+        image: DecorationImage(image: imageProvider, fit: BoxFit.cover),
       ),
     );
   }
@@ -333,25 +277,25 @@ class _DoctorScreenState extends State<DoctorScreen> {
                   letterSpacing: 1.5,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: (hasDisease ? AppColors.error : AppColors.accent)
-                      .withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  status.diseaseStatus.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: hasDisease ? AppColors.error : AppColors.accent,
-                  ),
-                ),
-              ),
+              // Container(
+              //   padding: const EdgeInsets.symmetric(
+              //     horizontal: 10,
+              //     vertical: 4,
+              //   ),
+              //   decoration: BoxDecoration(
+              //     color: (hasDisease ? AppColors.error : AppColors.accent)
+              //         .withValues(alpha: 0.1),
+              //     borderRadius: BorderRadius.circular(12),
+              //   ),
+              //   child: Text(
+              //     status.diseaseStatus.toUpperCase(),
+              //     style: TextStyle(
+              //       fontSize: 11,
+              //       fontWeight: FontWeight.bold,
+              //       color: hasDisease ? AppColors.error : AppColors.accent,
+              //     ),
+              //   ),
+              // ),
             ],
           ),
           const SizedBox(height: 8),
@@ -580,23 +524,43 @@ class _DoctorScreenState extends State<DoctorScreen> {
                     leading: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: record.imageUrl.isNotEmpty
-                          ? Image.network(
-                              record.imageUrl,
-                              width: 48,
-                              height: 48,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Container(
-                                    color: AppColors.lightGreen,
+                          ? (record.imageUrl.startsWith('http')
+                                ? Image.network(
+                                    record.imageUrl,
                                     width: 48,
                                     height: 48,
-                                    child: const Icon(
-                                      LucideIcons.image,
-                                      color: AppColors.primary,
-                                      size: 20,
-                                    ),
-                                  ),
-                            )
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            Container(
+                                              color: AppColors.lightGreen,
+                                              width: 48,
+                                              height: 48,
+                                              child: const Icon(
+                                                LucideIcons.image,
+                                                color: AppColors.primary,
+                                                size: 20,
+                                              ),
+                                            ),
+                                  )
+                                : Image.file(
+                                    File(record.imageUrl),
+                                    width: 48,
+                                    height: 48,
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            Container(
+                                              color: AppColors.lightGreen,
+                                              width: 48,
+                                              height: 48,
+                                              child: const Icon(
+                                                LucideIcons.image,
+                                                color: AppColors.primary,
+                                                size: 20,
+                                              ),
+                                            ),
+                                  ))
                           : Container(
                               color: AppColors.lightGreen,
                               width: 48,

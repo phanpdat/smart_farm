@@ -88,7 +88,6 @@ class TreatmentDetailScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final step = steps[index];
-                  // Remove list numbers, bullet dots (•), and dashes (-)
                   final cleanStep = step
                       .replaceFirst(RegExp(r'^(\d+\.\s*|-\s*|•\s*)'), '')
                       .trim();
